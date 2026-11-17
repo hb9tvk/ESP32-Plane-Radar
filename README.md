@@ -78,6 +78,28 @@ For advanced users only, `firmware.bin` is the application at `0x10000`, `bootlo
 
 Extract the complete source package into a fresh folder. Required assets (`data/ui_font.vlw` and the six RGB332 background images) are included. Run `BUILD.bat` on Windows with PlatformIO or use `pio run -e supermini` (then `pio run -t merge -e supermini`). The output is `.pio/build/supermini/firmware-merged.bin`. `UPLOAD.bat` uses PlatformIO to build/upload to a connected board.
 
+## Troubleshooting
+
+### Build fails: `ModuleNotFoundError: No module named 'intelhex'`
+
+This error comes from PlatformIO's `tool-esptoolpy` Python environment, **not from the Plane Radar firmware source**. It means the `intelhex` dependency is missing.
+
+**Fix (Windows / VS Code):** Open a PowerShell terminal and run:
+
+```powershell
+& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" -m pip install intelhex
+```
+
+Then build the project again.
+
+**If the error persists:** Close VS Code, remove the cached `tool-esptoolpy` package, then reopen VS Code and rebuild. PlatformIO should download the package again.
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.platformio\packages\tool-esptoolpy"
+```
+
+If PlatformIO is installed in a custom location, adjust these paths accordingly. This is a local toolchain issue; no changes to `platformio.ini` or the firmware code are needed.
+
 ## Configuration
 
 On first boot, use the `PlaneRadar-Setup` Wi-Fi portal. Once connected, open `http://<device-ip>/general` (IP shown in serial diagnostics; `.local` hostname resolution depends on the network). Other pages include Aircraft, Wi-Fi and Status.
