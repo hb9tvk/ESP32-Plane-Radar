@@ -72,7 +72,7 @@ Use a stable USB-C power supply. Wi-Fi transmit power is intentionally reduced; 
 
 ## Install / build
 
-For a fully verified and ready-to-flash **v2.0.1** image, use the `firmware-merged.bin` asset from the v2.0.1 GitHub Release **once published**. Until that binary is available, build the current `main` source following the instructions below. The previous v2.0.0 release remains a fallback.
+For a fully verified and ready-to-flash **v2.0.1** image, use the `firmware-merged.bin` asset from the v2.0.1 GitHub Release https://github.com/xztraz/ESP32-Plane-Radar-2424S012-Enhanced/releases/download/v2.0.1/firmware-merged.bin
 
 For advanced users only, `firmware.bin` is the application at `0x10000`, `bootloader.bin` starts at `0x0000`, and `partitions.bin` at `0x8000`. **Normal installation uses only the merged image at `0x0000`.** Never flash the application-only binary at `0x0000` or the merged image at `0x1000`.
 
