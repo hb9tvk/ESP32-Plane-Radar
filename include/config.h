@@ -30,19 +30,20 @@ constexpr unsigned long kBootResetHoldMs = 20000UL;
 constexpr unsigned long kBootTapMinMs = 40UL;
 
 // --- Display: GC9A01 1.28" round 240×240 (SPI) ---
-constexpr gpio_num_t kDisplayPinRst = static_cast<gpio_num_t>(-1);
-constexpr gpio_num_t kDisplayPinCs = GPIO_NUM_10;
-constexpr gpio_num_t kDisplayPinDc = GPIO_NUM_2;
-constexpr gpio_num_t kDisplayPinMosi = GPIO_NUM_7;  // display SDA
-constexpr gpio_num_t kDisplayPinSclk = GPIO_NUM_6;  // display SCL
+// Pinout for ESP32-C3 Super Mini + separate GC9A01 module (MatixYo wiring).
+constexpr gpio_num_t kDisplayPinRst = GPIO_NUM_0;
+constexpr gpio_num_t kDisplayPinCs = GPIO_NUM_1;
+constexpr gpio_num_t kDisplayPinDc = GPIO_NUM_10;
+constexpr gpio_num_t kDisplayPinMosi = GPIO_NUM_3;  // display SDA
+constexpr gpio_num_t kDisplayPinSclk = GPIO_NUM_4;  // display SCL
 
 constexpr int kDisplayWidth = 240;
 constexpr int kDisplayHeight = 240;
 
-constexpr uint32_t kDisplaySpiWriteHz = 80000000;  // 80 MHz GC9A01 SPI.
+constexpr uint32_t kDisplaySpiWriteHz = 80000000;  // 80 MHz GC9A01 SPI; use 40 MHz if long wires cause glitches.
 // GC9A01 modules often need invert + BGR for correct black/green output
 constexpr bool kDisplayInvert = true;
-constexpr bool kDisplayRgbOrder = false;
+constexpr bool kDisplayRgbOrder = true;
 
 // --- Public example location (configure your own in the setup portal) ---
 constexpr double kDefaultRadarLat = 52.229676;

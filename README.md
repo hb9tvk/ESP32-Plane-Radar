@@ -40,23 +40,23 @@ Configure the radar from a browser using the General and Aircraft pages.
 - Newly appearing aircraft fade in over **2 seconds**; missing aircraft symbols fade out over **12 seconds** from the first successful feed update that omits them. Symbols add light rather than painting dark pixels over the grid. Labels appear/disappear instantly.
 - Aircraft-specific watchlist with custom names in addition to normal labels, priority colors, adaptive label placement, and a global label-brightness control.
 - Airport runways, multiple range presets (5, 10, 15, 25, 50, 75, 100 km on the **third of four rings**), kilometres/miles, metric/imperial altitude, diagnostics and on-device web configuration.
-- CPU fixed at 160 MHz, display SPI configured at 80 MHz, Wi-Fi TX limited to **8.5 dBm** for stability, Wi-Fi sleep disabled.
+- CPU fixed at 160 MHz, display SPI configured at 80 MHz (verified with a jumper-wired GC9A01 module; drop to 40 MHz if you see glitches), Wi-Fi TX limited to **8.5 dBm** for stability, Wi-Fi sleep disabled.
 
 ## Hardware
 
 <img src="docs/images/esp32-2424s012-hardware.jpg" alt="ESP32-2424S012 non-touch hardware, front and back with BOOT and RESET buttons and antennas" width="600">
 
-**Target:** ESP32-2424S012 *non-touch* module with built-in GC9A01 display. This is not a pin-compatible replacement for the separate-display wiring shown in the original project's README.
+**Target:** ESP32-C3 Super Mini with a separate 1.28" GC9A01 round display module (original MatixYo wiring). Backlight (BL) is tied to 3.3 V; it is not driven by the firmware.
 
 Current firmware pin assignment from `include/config.h`:
 
 | Function | ESP32-C3 GPIO |
 | --- | --- |
-| LCD CS | 10 |
-| LCD DC | 2 |
-| LCD MOSI | 7 |
-| LCD SCLK | 6 |
-| LCD reset | -1 (not connected) |
+| LCD RST | 0 |
+| LCD CS | 1 |
+| LCD DC | 10 |
+| LCD SDA (MOSI) | 3 |
+| LCD SCL (SCLK) | 4 |
 | BOOT button | 9 |
 
 Use a stable USB-C power supply. Wi-Fi transmit power is intentionally reduced; do not raise it blindly on this board.
