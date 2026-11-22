@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include <driver/gpio.h>
@@ -55,6 +56,17 @@ constexpr unsigned long kAdsbFetchIntervalMs = 5000;
 // include/ui/radar_range.h. ADS-B polling stays at 5000 ms independently.
 /** false = hide aircraft with alt_baro "ground"; true = show them too. */
 constexpr bool kAdsbShowGroundAircraft = false;
+
+// --- Flight info (api.adsbdb.com): route, airline, detailed type ---
+/** false = labels show only callsign / registration / ICAO type from adsb.fi. */
+constexpr bool kFlightInfoEnabled = true;
+/** Lookups per ADS-B cycle (one keep-alive TLS connection, nearest first). */
+constexpr size_t kFlightInfoMaxRequestsPerCycle = 6;
+/** Stop starting new lookups after this long; the ADS-B poll waits for them. */
+constexpr uint32_t kFlightInfoBudgetMs = 4000;
+/** Label widths: main font is 7 px/char, type font 6 px/char. */
+constexpr size_t kLabelAirlineMaxChars = 16;
+constexpr size_t kLabelTypeMaxChars = 18;
 
 // --- UI colors (RGB565) — status screens ---
 constexpr uint16_t kColorBlack = 0x0000;

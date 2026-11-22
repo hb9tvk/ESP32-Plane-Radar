@@ -11,9 +11,9 @@ const char kGeneral[] PROGMEM = R"rdr(<!doctype html><html lang="en"><head><meta
 </body></html>)rdr";
 const char kAircraft[] PROGMEM = R"rdr(<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plane Radar - Aircraft</title><link rel="stylesheet" href="/assets/radar.css"></head><body><h1>Plane Radar</h1><nav><a href="/general" >General</a><a href="/aircraft" class="active">Aircraft</a><a href="/wifi-settings" >Wi-Fi</a><a href="/status" >Status</a></nav>
 <section><h2>Aircraft colors and priority</h2><p class="meta">Choose a hue and brightness. White aircraft can have colored trails: the trail follows the selected hue downward through darker shades.</p><div id="base"></div></section>
-<section><h2>Label information</h2><p class="meta">Checked lines are shown whenever they fit. Labels automatically move closer and remove lines in order: type, altitude, registration. When needed, the existing smaller pixel font is used; labels are never scaled.</p>
-<label class="check"><input type="checkbox" id="callsign">Callsign</label>
-<label class="check"><input type="checkbox" id="registration">Registration</label>
+<section><h2>Label information</h2><p class="meta">Checked lines are shown whenever they fit. Labels automatically move closer and shorten the type to its ICAO code, then remove lines in order: type, altitude, airline/registration. Route and airline are looked up online (adsbdb.com); when unknown, the callsign and registration are shown instead. The aircraft type uses the adsb.fi description when available. When needed, the existing smaller pixel font is used; labels are never scaled.</p>
+<label class="check"><input type="checkbox" id="callsign">Route (callsign)</label>
+<label class="check"><input type="checkbox" id="registration">Airline (registration)</label>
 <label class="check"><input type="checkbox" id="type">Aircraft type</label>
 <label class="check"><input type="checkbox" id="altitude">Altitude</label>
 <label>Label brightness: <strong id="label_brightness_value">100%</strong><input type="range" id="label_brightness" min="20" max="100" step="10" value="100"></label></section>

@@ -17,6 +17,7 @@
 #include "config.h"
 #include "firmware_version.h"
 #include "services/adsb_fetch_diagnostics.h"
+#include "services/flight_info_text.h"
 #include "services/http_body_framing.h"
 #include "services/http_response_head.h"
 
@@ -420,6 +421,11 @@ void fillTagFields(Aircraft* ac, const JsonObject& plane) {
   }
 
   copyJsonStringTrimmed(plane, "t", ac->type, sizeof(ac->type));
+  static_assert(sizeof(ac->type_desc) == config::kLabelTypeMaxChars + 1,
+                "type_desc must hold one label line");
+  services::flight_info::text::formatDescription(
+      plane["desc"].as<const char*>(), config::kLabelTypeMaxChars,
+      ac->type_desc, sizeof(ac->type_desc));
   formatAltitudeTag(plane, ac->alt, sizeof(ac->alt));
 }
 
@@ -532,7 +538,7 @@ bool fetchUpdate(double center_lat, double center_lon, float fetch_radius_km) {
   for (const char* key :
        {"lat", "lon", "true_heading", "mag_heading", "track", "dir", "gs",
         "tas", "ias", "alt_baro", "alt_geom", "seen_pos", "flight", "hex", "t",
-        "category", "dbFlags", "r"}) {
+        "category", "dbFlags", "r", "desc"}) {
     f[key] = true;
   }
 
@@ -593,7 +599,8 @@ bool fetchUpdate(double center_lat, double center_lon, float fetch_radius_km) {
   const size_t api_count = ac.size();
   size_t missing_position = 0;
   size_t ground_filtered = 0;
-  Aircraft parsed[kMaxAircraft];
+  // Static: only the ADS-B task calls fetchUpdate; keeps ~6 KB off its stack.
+  static Aircraft parsed[kMaxAircraft];
   size_t n = 0;
   for (JsonObject plane : ac) {
     if (n >= kMaxAircraft) break;

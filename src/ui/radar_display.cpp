@@ -22,6 +22,7 @@
 #include "services/adsb_client.h"
 #include "services/radar_location.h"
 #include "services/aircraft_watchlist.h"
+#include "services/flight_info.h"
 #include "ui/radar_range.h"
 #include "ui/aircraft_trail_settings.h"
 #include "ui/trail_fade.h"
@@ -634,7 +635,8 @@ struct AircraftTagText {
   char custom[17] = {};
   char callsign[24] = {};
   char registration[24] = {};
-  char type[8] = {};
+  char type[24] = {};
+  char type_short[8] = {};  // ICAO designator, used when space is short
   char altitude[20] = {};
 };
 
@@ -642,17 +644,25 @@ AircraftTagText aircraftTagText(const services::adsb::Aircraft& plane) {
   AircraftTagText tag;
   // Watchlist title is an ADDITIONAL line, never a replacement callsign.
   services::watchlist::find(plane, nullptr, tag.custom, sizeof(tag.custom));
+  // Line 1: route ("ZRH-ORD"), else callsign. Line 2: airline, else
+  // registration. Type: adsb.fi description ("Boeing 737 MAX 8"), else ICAO
+  // type designator ("B38M").
+  services::flight_info::Info info;
+  services::flight_info::lookup(plane, &info);
   if (ui::display_options::show(ui::display_options::kCallsign)) {
-    snprintf(tag.callsign, sizeof(tag.callsign), "%s", plane.callsign);
+    snprintf(tag.callsign, sizeof(tag.callsign), "%s",
+             info.route[0] ? info.route : plane.callsign);
   }
   if (ui::display_options::show(ui::display_options::kRegistration)) {
-    snprintf(tag.registration, sizeof(tag.registration), "%s", plane.registration);
+    snprintf(tag.registration, sizeof(tag.registration), "%s",
+             info.airline[0] ? info.airline : plane.registration);
   }
   if (tag.callsign[0] && strcmp(tag.callsign, tag.registration) == 0) {
     tag.registration[0] = '\0';
   }
   if (ui::display_options::show(ui::display_options::kType)) {
-    snprintf(tag.type, sizeof(tag.type), "%s", plane.type);
+    snprintf(tag.type, sizeof(tag.type), "%s", plane.type_desc[0] ? plane.type_desc : plane.type);
+    snprintf(tag.type_short, sizeof(tag.type_short), "%s", plane.type);
   }
   if (ui::display_options::show(ui::display_options::kAltitude) && plane.alt[0]) {
     if (ui::altitude_units::meters() && strstr(plane.alt, "ft")) {
@@ -668,8 +678,10 @@ AircraftTagText aircraftTagText(const services::adsb::Aircraft& plane) {
 
 // Adaptive detail is ALWAYS enabled. The web checkboxes control which lines
 // may appear; this layout only removes already-enabled lines when necessary.
-// Levels: 0=all, 1=no type, 2=no altitude, 3=no registration,
-// 4=callsign/name using native detail (smaller) pixel font.
+// Levels: 0=all, 1=ICAO type code instead of the long type description,
+// 2=no type, 3=no altitude, 4=no registration/airline,
+// 5 (kCompactTagLevel)=callsign/name using native detail (smaller) pixel font.
+constexpr uint8_t kCompactTagLevel = 5;
 struct TagLayout {
   AircraftTagText text = {};
   uint8_t level = 0;
@@ -682,11 +694,14 @@ TagLayout tagLayoutFor(const AircraftTagText& original, uint8_t level) {
   TagLayout out = {};
   out.text = original;
   out.level = level;
-  out.primary = radar::rangeCurrent().ring3_km < 50.0f && level != 4;
-  if (level >= 1) out.text.type[0] = '\0';
-  if (level >= 2) out.text.altitude[0] = '\0';
-  if (level >= 3) out.text.registration[0] = '\0';
-  if (level == 4 && !original.custom[0] && !original.callsign[0]) {
+  out.primary = radar::rangeCurrent().ring3_km < 50.0f && level != kCompactTagLevel;
+  if (level == 1 && original.type_short[0]) {
+    memcpy(out.text.type, original.type_short, sizeof(original.type_short));
+  }
+  if (level >= 2) out.text.type[0] = '\0';
+  if (level >= 3) out.text.altitude[0] = '\0';
+  if (level >= 4) out.text.registration[0] = '\0';
+  if (level == kCompactTagLevel && !original.custom[0] && !original.callsign[0]) {
     // Respect a disabled callsign checkbox: the final compact label can
     // instead retain one of the other *enabled* fields in its original color.
     if (original.registration[0]) {
@@ -695,6 +710,8 @@ TagLayout tagLayoutFor(const AircraftTagText& original, uint8_t level) {
     } else if (original.altitude[0]) {
       memcpy(out.text.altitude, original.altitude,
              sizeof(out.text.altitude));
+    } else if (original.type_short[0]) {
+      memcpy(out.text.type, original.type_short, sizeof(original.type_short));
     } else if (original.type[0]) {
       memcpy(out.text.type, original.type, sizeof(out.text.type));
     }
@@ -1046,7 +1063,7 @@ void placeAircraftTags(const AircraftDrawItem* items, size_t count,
           static_cast<uint32_t>(now - memory.detail_changed_ms) < 2000u)
           ? memory.detail : 0;
       bool placed = false;
-      for (int level = start_level; level <= 4 && !placed; ++level) {
+      for (int level = start_level; level <= kCompactTagLevel && !placed; ++level) {
         const TagLayout layout = tagLayoutFor(original, static_cast<uint8_t>(level));
         if (!layout.height || layout.width < 1) continue;
         for (int attempt = -1; attempt < 6 && !placed; ++attempt) {
@@ -1094,7 +1111,7 @@ void placeAircraftTags(const AircraftDrawItem* items, size_t count,
       // A priority label must survive crowding. Use only a callsign / name
       // in the smaller native font if no collision-free label can be found.
       if (!placed && protected_label) {
-        const TagLayout layout = tagLayoutFor(original, 4);
+        const TagLayout layout = tagLayoutFor(original, kCompactTagLevel);
         if (!layout.height) continue;
         LabelRect candidate = {};
         int chosen_slot = -1;
@@ -1122,8 +1139,8 @@ void placeAircraftTags(const AircraftDrawItem* items, size_t count,
                          effective_brightness_q12);
         reserved[reserved_count++] = candidate;
         memory.slot = static_cast<uint8_t>(chosen_slot);
-        if (memory.detail != 4) {
-          memory.detail = 4;
+        if (memory.detail != kCompactTagLevel) {
+          memory.detail = kCompactTagLevel;
           memory.detail_changed_ms = now;
         }
         memory.visible = true;

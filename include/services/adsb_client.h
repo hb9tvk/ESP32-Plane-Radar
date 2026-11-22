@@ -20,6 +20,8 @@ struct Aircraft {
   char registration[13];
   bool isHelicopter = false;
   char type[5];
+  /** adsb.fi "desc" formatted for the label, e.g. "Boeing 737 MAX 8". */
+  char type_desc[19];
   char alt[12];
   bool isMilitary = false;
 };

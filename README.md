@@ -38,6 +38,7 @@ Configure the radar from a browser using the General and Aircraft pages.
 - Selectable green, red, amber, cyan, violet or white radar backgrounds. A brightness map is recolored with a small lookup table; only **one RGB332 framebuffer** is used.
 - Anti-aliased aircraft symbols, helicopter rings, screen-edge bearing dots, smooth historical phosphor trails, configurable trail fade curves, and adjustable additive position dots.
 - Newly appearing aircraft fade in over **2 seconds**; missing aircraft symbols fade out over **12 seconds** from the first successful feed update that omits them. Symbols add light rather than painting dark pixels over the grid. Labels appear/disappear instantly.
+- Flight labels with route (`ZRH-DUB`), airline and detailed aircraft type (`Boeing 737 MAX 8`), falling back to callsign and registration — see [Flight labels](#flight-labels).
 - Aircraft-specific watchlist with custom names in addition to normal labels, priority colors, adaptive label placement, and a global label-brightness control.
 - Airport runways, multiple range presets (5, 10, 15, 25, 50, 75, 100 km on the **third of four rings**), kilometres/miles, metric/imperial altitude, diagnostics and on-device web configuration.
 - CPU fixed at 160 MHz, display SPI configured at 80 MHz (verified with a jumper-wired GC9A01 module; drop to 40 MHz if you see glitches), Wi-Fi TX limited to **8.5 dBm** for stability, Wi-Fi sleep disabled.
@@ -60,6 +61,26 @@ Current firmware pin assignment from `include/config.h`:
 | BOOT button | 9 |
 
 Use a stable USB-C power supply. Wi-Fi transmit power is intentionally reduced; do not raise it blindly on this board.
+
+## Flight labels
+
+Each aircraft label shows up to four lines:
+
+| Line | Shown | Fallback |
+| --- | --- | --- |
+| 1 | Route as airport codes, e.g. `ZRH-ORD` (IATA, else ICAO) | Callsign |
+| 2 | Airline, e.g. `British Airways` | Registration |
+| 3 | Aircraft type from the adsb.fi description, e.g. `Boeing 737 MAX 8` | ICAO type code, e.g. `B38M` |
+| 4 | Altitude | — |
+
+- **Route and airline** come from [adsbdb.com](https://www.adsbdb.com/) (`/v0/callsign/…`). Lookups run in the ADS-B task right after a successful adsb.fi poll, nearest aircraft first, over one keep-alive HTTPS connection: at most 6 requests and 4 seconds per cycle. Results are cached per callsign (64 entries, LRU): found routes for 2 hours, unknown callsigns for 30 minutes, errors retried after 60 seconds; HTTP 429 pauses lookups for 60 seconds. The renderer only reads the cache, so a slow or failed lookup never blocks drawing.
+- **Multi-leg routes:** adsbdb lists some callsigns as origin → midpoint → destination (e.g. `ZRH>DUB>ZRH`). The label shows the current leg, chosen from whether the aircraft's track points toward the midpoint. A route whose two ends are the same airport falls back to the callsign.
+- **Aircraft type** needs no extra request: adsb.fi's `desc` field (e.g. `BOEING 737 MAX 8`) is title-cased and shortened at word boundaries to 18 characters. Aircraft without a description show the ICAO code.
+- **Crowded labels** first move closer, then shorten the type to its ICAO code, then drop lines in order: type, altitude, airline/registration.
+- The **Aircraft** web page still toggles each line; the first two are labelled *Route (callsign)* and *Airline (registration)*. Set `kFlightInfoEnabled = false` in `include/config.h` to disable online lookups.
+- The serial log prints each lookup, e.g. `flight info: SWR8 ZRH>DUB>ZRH (shown ZRH-DUB) Swiss`, which helps when a route looks wrong. adsbdb data is crowd-sourced and can be missing or out of date.
+
+Labels use the ASCII pixel font, so accented names are folded (`Aeroméxico` → `Aeromexico`) and corporate suffixes such as `SA`, `AG` or `Ltd` are dropped.
 
 ## What's new in v2.0.1
 
@@ -114,12 +135,12 @@ On first boot, use the `PlaneRadar-Setup` Wi-Fi portal. Once connected, open `ht
 
 - One full-screen 57,600-byte RGB332 framebuffer; flash-backed pre-rendered grid maps.
 - Fixed-point antialiasing, smooth palette gradients and additive symbol/trail compositing.
-- BearSSL is used to reduce peak HTTPS heap pressure on the ESP32-C3. The present client uses `setInsecure()` and **does not validate server certificates**; TLS encryption is present but endpoint authentication is disabled. Do not rely on this for sensitive data or a trusted feed without implementing proper certificate verification.
+- BearSSL is used to reduce peak HTTPS heap pressure on the ESP32-C3. Only one TLS session (adsb.fi or adsbdb) is open at a time. Both clients use `setInsecure()` and **does not validate server certificates**; TLS encryption is present but endpoint authentication is disabled. Do not rely on this for sensitive data or a trusted feed without implementing proper certificate verification.
 - The frame rate adapts by range. A few unusually slow frames can result from scheduling/interruptions; Status has timing diagnostics.
 
 ## Tests and generated assets
 
-C++ host tests are under `test/`. Background assets are generated by `scripts/generate_flash_grid.py` and `scripts/generate_radar_patterns.py`; precalculated outputs are included for normal PlatformIO builds.
+C++ host tests are under `test/`; `test/test_flight_info_text.cpp` covers the label text formatting (ASCII folding, truncation, routes and type names) and builds standalone with any C++17 compiler. Background assets are generated by `scripts/generate_flash_grid.py` and `scripts/generate_radar_patterns.py`; precalculated outputs are included for normal PlatformIO builds.
 
 ## Upstream credit and license
 

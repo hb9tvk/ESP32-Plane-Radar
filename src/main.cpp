@@ -11,6 +11,7 @@
 #include "firmware_version.h"
 #include "hardware/display.h"
 #include "services/adsb_client.h"
+#include "services/flight_info.h"
 #include "services/radar_location.h"
 #include "services/wifi_setup.h"
 #include "ui/radar_display.h"
@@ -92,8 +93,20 @@ void adsbFetchTask(void*) {
           last_memory_log_ms = now;
         }
         previous_fetch_failed = !ok;
+        // Route/airline/type lookups reuse the same slot: the adsb.fi TLS
+        // session is closed, so only one TLS buffer set is live at a time.
+        // Their time comes out of the poll interval, not on top of it.
+        uint32_t lookup_ms = 0;
+        if (ok && !wifiRadarWorkPaused()) {
+          const uint32_t lookup_start = millis();
+          services::flight_info::fetchPending(services::location::lat(),
+                                              services::location::lon());
+          lookup_ms = millis() - lookup_start;
+        }
         wifiEndAdsbFetch();
-        vTaskDelay(pdMS_TO_TICKS(config::kAdsbFetchIntervalMs));
+        const uint32_t wait_ms = lookup_ms + 250 < config::kAdsbFetchIntervalMs
+            ? config::kAdsbFetchIntervalMs - lookup_ms : 250;
+        vTaskDelay(pdMS_TO_TICKS(wait_ms));
       } else {
         // A web save is in progress, or needs to retry after TLS finishes.
         vTaskDelay(pdMS_TO_TICKS(250));
@@ -127,6 +140,7 @@ void setup() {
   services::location::init();
   ui::radar::rangeInit();
   services::adsb::init();
+  services::flight_info::init();
 
   if (wifiSetupConnect()) {
     showRadarIfConnected();
