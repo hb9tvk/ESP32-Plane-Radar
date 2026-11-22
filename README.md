@@ -6,7 +6,7 @@ This is an independently customized firmware branch, **not an official release**
 
 ## Pictures
 
-<img src="docs/images/radar-running.jpg" alt="Plane Radar running on the ESP32-2424S012 round display" width="480">
+<img src="docs/images/radar-tvk.jpg" alt="Plane Radar running on the ESP32 C3 supermini with round display" width="480">
 
 ### Background colors
 
